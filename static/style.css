@@ -21,7 +21,7 @@ body {
 
 .candidate-card {
     display: block;
-    background: rgb(149, 180, 236);
+    background: rgb(139, 168, 226);
     border-radius: 18px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.08);
     cursor: pointer;
@@ -41,4 +41,36 @@ body {
 .candidate-card img {
     border: 4px solid #173056;
     box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.glass-box {
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    color: white;
+}
+@media (max-width: 768px) {
+    h1, h2 {
+        font-size: 1.5rem !important;
+    }
+
+    .candidate-card {
+        padding: 1rem !important;
+    }
+
+    .glass-box {
+        padding: 1rem !important;
+    }
+}
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 0.9rem !important;
+        flex-wrap: wrap;
+    }
+
+    .navbar-brand img {
+        width: 48px !important;
+        height: 48px !important;
+    }
 }

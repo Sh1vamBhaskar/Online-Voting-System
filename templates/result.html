@@ -3,18 +3,25 @@
 <head>
     <title>Results</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body style="
-            min-height:100vh;
+<div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background:
-            radial-gradient(circle at 30px 30px, rgba(255,255,255,0.18) 4px, transparent 4px),
-            radial-gradient(circle at 90px 70px, rgba(255,255,255,0.12) 6px, transparent 6px),
-            linear-gradient(135deg, #4e49bc, #9333ea, #793274);
-            background-size: 120px 120px, 180px 180px, cover;
-            ">
+            linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
+            url('{{ url_for('static', filename='candidates_images/srmist_bg.jpg') }}') center/cover no-repeat;
+            filter: blur(20px);
+            z-index: -1;
+            "></div>
 <div class="container py-5">
-    <h2 class="text-center fw-bold mb-5"> Live Election Results</h2>
+    <h2 class="text-center fw-bold mb-5 text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+      Live Election Results
+    </h2>
 
     {% set image_map = {
         'Aman Sharma': 'aman.jpg',
@@ -29,17 +36,27 @@
         'Tanshika Bhratacharya': 'Tanishka.jpg'
         } %}
 
-    <div class="card shadow-lg border-0 mb-5 text-center p-4">
+    <div class="mb-5 text-center p-4" style="
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        ">
         <img src="{{ url_for('static', filename='candidates_images/' ~ image_map.get(winner[0], 'aman.jpg')) }}"
              class="rounded-circle mx-auto mb-3"
              style="width:140px;height:140px;object-fit:cover;">
-        <h2 class="fw-bold"> Winner 👑</h2>
-        <h3 class="text-success">{{ winner[0] }}</h3>
+        <h2 class="fw-bold" style="color:#facc15; text-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+             🎉 Winner 🎉
+        </h2>
+        <h3 class="fw-bold" style="color:#ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+            {{ winner[0] }}
+        </h3>
     </div>
 
     {% for result in results %}
     <div class="mb-4">
-        <div class="d-flex justify-content-between">
+        <div class="d-flex justify-content-between text-white"
+            style="text-shadow: 0 1px 6px rgba(0,0,0,0.4);">
             <strong>{{ result[0] }}</strong>
             <span>{{ result[1] }} votes</span>
         </div>

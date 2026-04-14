@@ -3,39 +3,51 @@
 <head>
     <title>Vote Now</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="light-bg">
-<div class="container py-5">
-    <h2 class="text-center mb-5 fw-bold">🗳️ Cast Your Vote</h2>
+<body style="
+            min-height:100vh;
+            background:
+            linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+            url('{{ url_for('static', filename='candidates_images/srmist_bg.jpg') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            ">
+ <div class="container py-5">
+    <div class="text-center mb-5">
+        <span style="
+            display: inline-block;
+            padding: 10px 22px;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            background: rgba(255,255,255,0.16);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        ">
+            🗳️ Please, Cast Your Vote
+        </span>
+    </div>
 
-    {% set image_map = {
-        'Aman Sharma': 'aman.jpg',
-        'Vaibhav Raj': 'vaibhav.jpg',
-        'Priya Mishra': 'priya.jpg',
-        'Pravesh Sahu': 'pravesh.jpg',
-        'Shubhra Jha': 'shubhra.jpg',
-        'Aarohi Jain': 'aarohi.jpg',
-        'Rohit Saxena': 'rohit.jpg',
-        'Prem Kashyap': 'prem.jpg',
-        'Swati Shree': 'swati.jpg',
-        'Tanshika Bhratacharya': 'Tanishka.jpg'
-    } %}
-
-    <form method="POST">
+        <form method="POST">
         <div class="row g-4">
             {% for candidate in candidates %}
-            <div class="col-md-4 col-lg-3">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                 <label class="candidate-card p-4 w-100 text-center">
 
-                    <img src="{{ url_for('static', filename='candidates_images/' ~ image_map.get(candidate[1], 'aman.jpg')) }}"
-                         class="img-fluid rounded-circle mb-3"
-                         style="width:120px;height:120px;object-fit:cover;">
+                    <img src="{{ url_for('static', filename='candidates_images/' ~ candidate[2]) }}"
+                        class="img-fluid rounded-circle mb-3"
+                        style="width:120px;height:120px;object-fit:cover;">
 
                     <input type="radio" name="candidate" value="{{ candidate[0] }}" required>
-                    <h4 class="mt-3">{{ candidate[1] }}</h4>
-                    <p class="text-muted mb-1">Position: Student Council</p>
-                    <p class="text-muted">Department: CSE</p>
+
+                        <h4 class="mt-3">{{ candidate[1] }}</h4>
+                        <p class="text-muted mb-1">Position: Student Council</p>
+                        <p class="text-muted">Department: CSE</p>
                 </label>
             </div>
             {% endfor %}

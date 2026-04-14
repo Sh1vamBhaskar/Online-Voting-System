@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, redirect, session
 from flask_mail import Mail, Message
+from datetime import datetime
 import random
 import sqlite3
 import os
+
 
 app = Flask(__name__)
 app.secret_key = "college_voting_secret"
@@ -33,6 +35,13 @@ def init_db():
             has_voted INTEGER DEFAULT 0
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS vote_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT,
+            voted_at TEXT
+        )
+    """)
 
     # Candidates table
     cur.execute("""
@@ -45,7 +54,7 @@ def init_db():
     """)
 
     # Seed 50 students (101-150)
-    students = [(str(i), f"pass{i}") for i in range(101, 151)]
+    students = [(str(i), f"pass{i}") for i in range(101, 201)]
     for s in students:
         try:
             cur.execute(
@@ -55,29 +64,45 @@ def init_db():
         except sqlite3.IntegrityError:
             pass
 
+    #CREATE TABLE IF NOT EXISTS candidate_requests
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS candidate_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT,
+            reg_no TEXT,
+            email TEXT,
+            course TEXT,
+            branch TEXT,
+            specialization TEXT,
+            position TEXT,
+            photo TEXT,
+            status TEXT DEFAULT 'Pending'
+        )
+        """)
+     
     # Seed 10 candidates with custom names + images
-    candidate_names = [
-        "Aman Sharma",
-        "Vaibhav Raj",
-        "Priya Mishra",
-        "Pravesh Sahu",
-        "Shubhra Jha",
-        "Aarohi Jain",
-        "Rohit Saxena",
-        "Prem Kashyap",
-        "Swati Shree",
-        "Tanshika Bhratacharya",
-    ]
+    candidate_data = [
+                        ("Aman Sharma", "aman.jpg"),
+                        ("Vaibhav Raj", "vaibhav.jpg"),
+                        ("Priya Mishra", "priya.jpg"),
+                        ("Pravesh Sahu", "pravesh.jpg"),
+                        ("Shubhra Jha", "shubhra.jpg"),
+                        ("Aarohi Jain", "aarohi.jpg"),
+                        ("Rohit Saxena", "rohit.jpg"),
+                        ("Prem Kashyap", "prem.jpg"),
+                        ("Swati Shree", "swati.jpg"),
+                        ("Tanshika Bhratacharya", "Tanishka.jpg"),
+                    ]
 
-    # Insert only if table is empty
     cur.execute("SELECT COUNT(*) FROM candidates")
     count = cur.fetchone()[0]
+
     if count == 0:
-        for idx, name in enumerate(candidate_names, start=1):
+        for name, image in candidate_data:
             cur.execute(
-                "INSERT INTO candidates (name, image) VALUES (?, ?)",
-                (name, f"cand{idx}.jpg"),
-            )
+            "INSERT INTO candidates (name, image) VALUES (?, ?)",
+            (name, image)
+        )
 
     conn.commit()
     conn.close()
@@ -117,6 +142,7 @@ def login():
         if student:
             otp = str(random.randint(100000, 999999))
             session["pending_roll_no"] = roll_no
+            session["pending_email"] = email
             session["otp"] = otp
 
             msg = Message(
@@ -130,7 +156,7 @@ def login():
 
             return redirect("/verify_otp")
 
-            return render_template(
+        return render_template(
             "message.html",
             title="❌ Login Failed",
             message="Invalid credentials. Please check roll number and password.",
@@ -139,6 +165,54 @@ def login():
 
     return render_template("login.html")
 
+#adding BACKEND ROUTE to Save candidate request
+
+@app.route("/candidate_register", methods=["GET", "POST"])
+def candidate_register():
+    if request.method == "POST":
+        full_name = request.form["full_name"]
+        reg_no = request.form["reg_no"]
+        email = request.form["email"]
+        course = request.form["course"]
+        branch = request.form["branch"]
+        specialization = request.form["specialization"]
+        position = request.form["position"]
+
+        photo = request.files["photo"]
+        filename = photo.filename
+        photo.save(os.path.join("static/candidates_images", filename))
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO candidate_requests
+            (full_name, reg_no, email, course, branch, specialization, position, photo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            full_name,
+            reg_no,
+            email,
+            course,
+            branch,
+            specialization,
+            position,
+            filename
+        ))
+        conn.commit()
+        conn.close()
+
+        return redirect("/candidate_success")
+
+    return render_template("candidate_register.html")
+@app.route("/candidate_success")
+def candidate_success():
+    return render_template(
+        "message.html",
+        title="✅ Request Submitted",
+        message="Your request has been submitted successfully. Wait for admin approval.",
+        back_url="/candidate_register"
+    )
+
 @app.route("/verify_otp", methods=["GET", "POST"])
 def verify_otp():
     if request.method == "POST":
@@ -146,8 +220,10 @@ def verify_otp():
 
         if entered_otp == session.get("otp"):
             session["roll_no"] = session.get("pending_roll_no")
+            session["email"] = session.get("pending_email")
             session.pop("otp", None)
             session.pop("pending_roll_no", None)
+            session.pop("pending_email", None)
             return redirect("/vote")
 
         return render_template(
@@ -188,6 +264,12 @@ def vote():
         cur.execute(
             "UPDATE students SET has_voted=1 WHERE roll_no=?",
             (session["roll_no"],),
+        )
+        email = session.get("email")
+
+        cur.execute(
+            "INSERT INTO vote_audit (email, voted_at) VALUES (?, ?)",
+            (email, datetime.now().strftime("%d-%m-%Y %I:%M %p"))
         )
 
         conn.commit()
@@ -238,12 +320,37 @@ def admin():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
+    # 📊 election results
     cur.execute("SELECT name, votes FROM candidates ORDER BY votes DESC")
     results = cur.fetchall()
 
+    # 📥 pending candidate requests
+    cur.execute("SELECT * FROM candidate_requests WHERE status='Pending'")
+    requests = cur.fetchall()
+
     conn.close()
 
-    return render_template("admin.html", results=results)
+    return render_template(
+        "admin.html",
+        results=results,
+        requests=requests
+    )
+
+@app.route("/audit_logs")
+def audit_logs():
+    if "admin" not in session:
+        return redirect("/admin_login")
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("SELECT email, voted_at FROM vote_audit ORDER BY id DESC")
+    logs = cur.fetchall()
+
+    conn.close()
+
+    return render_template("audit_logs.html", logs=logs)
+
 
 @app.route("/add_candidate", methods=["POST"])
 def add_candidate():
@@ -251,13 +358,16 @@ def add_candidate():
         return redirect("/admin_login")
 
     name = request.form["name"]
-    image = request.form["image"]
+
+    photo = request.files["photo"]
+    filename = photo.filename
+    photo.save(os.path.join("static/candidates_images", filename))
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO candidates (name, image, votes) VALUES (?, ?, 0)",
-        (name, image),
+        (name, filename)
     )
     conn.commit()
     conn.close()
@@ -275,6 +385,36 @@ def delete_candidate(id):
     conn.commit()
     conn.close()
 
+    return redirect("/admin")
+
+#ADMIN ROUTES to either Approve / Reject
+@app.route("/approve_candidate/<int:id>")
+def approve_candidate(id):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("SELECT full_name, photo FROM candidate_requests WHERE id=?", (id,))
+    req = cur.fetchone()
+
+    cur.execute(
+        "INSERT INTO candidates (name, image, votes) VALUES (?, ?, 0)",
+        (req[0], req[1])
+    )
+
+    cur.execute("DELETE FROM candidate_requests WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
+
+
+@app.route("/reject_candidate/<int:id>")
+def reject_candidate(id):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM candidate_requests WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
     return redirect("/admin")
 
 
